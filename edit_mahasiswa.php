@@ -1,0 +1,103 @@
+<?php
+require_once 'functions.php';
+check_login();
+
+$id = $_GET['id'] ?? null;
+if (!$id) {
+    header("Location: dashboard.php");
+    exit;
+}
+
+$mhs = get_mahasiswa_by_id($id);
+if (!$mhs) {
+    header("Location: dashboard.php");
+    exit;
+}
+
+$prodi_list = get_all_prodi();
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
+    if (edit_mahasiswa($_POST) >= 0) {
+        header("Location: dashboard.php");
+        exit;
+    } else {
+        $error = "Gagal memperbarui data mahasiswa.";
+    }
+}
+
+// Ekstrak tahun angkatan dari NIM saat ini (4 digit setelah 2 digit prefix)
+$tahun_angkatan_saat_ini = (strlen($mhs['nim']) >= 6) ? substr($mhs['nim'], 2, 4) : date('Y');
+
+include 'components/header.php';
+?>
+
+<div class="container my-5" style="max-width: 600px;">
+    <div class="bg-white p-4 rounded shadow-sm">
+        <h3 class="mb-4">Edit Data Mahasiswa</h3>
+
+        <?php if (!empty($error)): ?>
+            <div class="alert alert-danger"><?= htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+
+        <form action="edit_mahasiswa.php?id=<?= $id; ?>" method="POST">
+            <input type="hidden" name="id" value="<?= $mhs['id']; ?>">
+
+            <div class="mb-3">
+                <label class="form-label">NIM Saat Ini</label>
+                <input type="text" class="form-control" value="<?= htmlspecialchars($mhs['nim']); ?>" disabled readonly>
+                <small class="text-muted">*NIM otomatis diperbarui jika Program Studi atau Tahun Angkatan diubah.</small>
+            </div>
+            <div class="mb-3">
+                <label for="nama" class="form-label">Nama Lengkap</label>
+                <input type="text" class="form-control" id="nama" name="nama" value="<?= htmlspecialchars($mhs['nama']); ?>" required>
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" value="<?= htmlspecialchars($mhs['email']); ?>" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password Baru</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Biarkan kosong jika tidak ingin mengubah password">
+            </div>
+            <div class="mb-3">
+                <label for="id_prodi" class="form-label">Program Studi</label>
+                <select class="form-select" id="id_prodi" name="id_prodi" required>
+                    <?php foreach ($prodi_list as $p): ?>
+                        <option value="<?= $p['id_prodi']; ?>" <?= $p['id_prodi'] == $mhs['id_prodi'] ? 'selected' : ''; ?>>
+                            <?= htmlspecialchars($p['nama_prodi']); ?> (Prefix: <?= htmlspecialchars($p['kode_prefix']); ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="tahun_angkatan" class="form-label">Tahun Angkatan</label>
+                <input type="number" class="form-control" id="tahun_angkatan" name="tahun_angkatan" value="<?= htmlspecialchars($tahun_angkatan_saat_ini); ?>" min="2000" max="2099" required>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="nilai_tugas" class="form-label">Nilai Tugas</label>
+                    <input type="number" step="0.01" class="form-control" id="nilai_tugas" name="nilai_tugas" value="<?= htmlspecialchars($mhs['nilai_tugas']); ?>">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="nilai_uts" class="form-label">Nilai UTS</label>
+                    <input type="number" step="0.01" class="form-control" id="nilai_uts" name="nilai_uts" value="<?= htmlspecialchars($mhs['nilai_uts']); ?>">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="nilai_uas" class="form-label">Nilai UAS</label>
+                    <input type="number" step="0.01" class="form-control" id="nilai_uas" name="nilai_uas" value="<?= htmlspecialchars($mhs['nilai_uas']); ?>">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="kehadiran" class="form-label">Kehadiran (Jumlah Pertemuan)</label>
+                <input type="number" class="form-control" id="kehadiran" name="kehadiran" value="<?= htmlspecialchars($mhs['kehadiran']); ?>">
+            </div>
+            <div class="d-flex justify-content-between">
+                <a href="dashboard.php" class="btn btn-secondary">Batal</a>
+                <button type="submit" name="submit" class="btn btn-primary">Update</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php include 'components/footer.php'; ?>
